@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Summary styles */
+        .summary {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    
+        /* Form group styles */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+    
+        /* Toast (flash message) styles */
+        .toast {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .toast.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .toast.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top of other elements */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.5); /* Black with opacity */
+        }
+    
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto; /* 10% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%; /* Adjust width as needed */
+            max-width: 500px; /* Maximum width */
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+    
+        .modal-content h3 {
+            margin-top: 0;
+            color: #333;
+        }
+    
+        .modal-content p {
+            color: #666;
+        }
+    
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+    
+        /* Button styles */
+        .modify-button {
+            background-color: #4CAF50; /* Green background */
+            color: white; /* White text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+    
+        .modify-button:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+    
+        .delete-button {
+            background-color: #f44336; /* Red background */
+            color: white; /* White text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+    
+        .delete-button:hover {
+            background-color: #d32f2f; /* Darker red on hover */
+        }
+    
+        .cancel-button {
+            background-color: #ccc; /* Gray background */
+            color: #333; /* Dark text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+    
+        .cancel-button:hover {
+            background-color: #bbb; /* Darker gray on hover */
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Finance</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <form method="POST">
+        <div class="form-group">
+            <select id="transaction_type" name="transaction_type" required>
+                <option value="" disabled selected>Select Transaction Type</option>
+                <option value="income">Income</option>
+                <option value="rent">Rent</option>
+                <option value="utilities">Utilities</option>
+                <option value="salaries">Salaries</option>
+                <option value="supplies">Supplies</option>
+                <option value="marketing">Marketing</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="other">Other</option>
+            </select>
+            <label for="transaction_type">Transaction Type</label>
+        </div>
+        <div class="form-group">
+            <input type="number" step="0.01" id="amount" name="amount" min="0.01" required placeholder=" ">
+            <label for="amount">Amount</label>
+        </div>
+        <div class="form-group">
+            <input type="date" id="transaction_date" name="transaction_date" required placeholder=" ">
+            <label for="transaction_date">Transaction Date</label>
+        </div>
+        <div class="form-group">
+            <textarea id="description" name="description" placeholder=" "></textarea>
+            <label for="description">Description</label>
+        </div>
+        <button type="submit">Record Transaction</button>
+    </form>
+
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Recent Transactions Table -->
+    <h2>Recent Transactions</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.transaction_datetime }}</td>
+                    <td>{{ transaction.transaction_type }}</td>
+                    <td>{{ transaction.amount }}</td>
+                    <td>{{ transaction.description }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Summary Section -->
+    <div class="summary">
+        <p>Total Income: {{ total_income }}</p>
+        <p>Total Expenses: {{ total_expenses }}</p>
+        <p>Net Balance: {{ net_balance }}</p>
+    </div>
+</body>
+</html>

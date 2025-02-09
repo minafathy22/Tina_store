@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refunds</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Add Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Add a pointer cursor to sortable headers */
+        th {
+            cursor: pointer;
+        }
+
+        /* Hide table data initially */
+        #salesTable tbody {
+            display: none;
+        }
+
+        /* Show table data when search tools are used */
+        #salesTable tbody.show {
+            display: table-row-group;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Refunds</h1>
+    </div>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <h2>Sales History</h2>
+
+    <!-- Dropdown for Filtering by Mobile Number -->
+    <label for="mobileSearch">Filter by Mobile Number:</label>
+    <select id="mobileSearch" class="select2" style="width: 300px;">
+        <option value="">Select a mobile number</option>
+        {% for customer in customers %}
+            <option value="{{ customer['contact_info'] }}">
+                {{ customer['contact_info'] }} ({{ customer['customer_name'] }})
+            </option>
+        {% endfor %}
+    </select>
+
+    <!-- Sales Table -->
+    <table id="salesTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Sale Date</th>
+                <th onclick="sortTable(1)">Customer Name</th>
+                <th onclick="sortTable(2)">Mobile</th>
+                <th onclick="sortTable(3)">Product Name</th>
+                <th onclick="sortTable(4)">Quantity</th>
+                <th onclick="sortTable(5)">Total Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+                <tr>
+                    <td>{{ sale['sale_datetime'] }}</td>
+                    <td>{{ sale['customer_name'] }}</td>
+                    <td>{{ sale['contact_info'] }}</td>
+                    <td>{{ sale['product_name'] }}</td>
+                    <td>{{ sale['quantity'] }}</td>
+                    <td>${{ sale['total_amount'] }}</td>
+                    <td>
+                        <form action="{{ url_for('refund', sale_id=sale['id']) }}" method="POST" style="display:inline;">
+                            <input type="number" name="refund_quantity" min="1" max="{{ sale['quantity'] }}" value="{{ sale['quantity'] }}" required>
+                            <button type="submit" class="refund-button">Refund</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <!-- Add jQuery and Select2 JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2
+            $('.select2').select2();
+
+            // Show table data when search tools are used
+            function showTableData() {
+                $('#salesTable tbody').addClass('show');
+            }
+
+            // Filter sales table based on selected mobile number
+            $('#mobileSearch').on('change', function() {
+                var selectedMobile = $(this).val();
+                $('tbody tr').each(function() {
+                    var mobile = $(this).find('td:nth-child(3)').text(); // Mobile is now the 3rd column
+                    if (selectedMobile === "" || mobile === selectedMobile) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+                showTableData(); // Show table data after filtering
+            });
+        });
+
+        // Sort Functionality
+        function sortTable(columnIndex) {
+            const table = document.getElementById('salesTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Determine the current sort order
+            const isAscending = tbody.getAttribute('data-sort-order') === 'asc';
+            tbody.setAttribute('data-sort-order', isAscending ? 'desc' : 'asc');
+
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+
+                // Handle numeric columns (e.g., Quantity, Total Amount)
+                if (!isNaN(aValue) && !isNaN(bValue)) {
+                    return isAscending ? aValue - bValue : bValue - aValue;
+                }
+
+                // Handle date columns (e.g., Sale Date)
+                if (columnIndex === 0) { // Sale Date is now the 1st column (index 0)
+                    return isAscending ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
+                }
+
+                // Default to string comparison
+                return isAscending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            });
+
+            // Clear the table and re-add sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>

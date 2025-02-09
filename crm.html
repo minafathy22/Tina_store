@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1005;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        /* Button styles */
+        .modify-button {
+            background-color: #4CAF50; /* Green background */
+            color: white; /* White text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+
+        .modify-button:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+
+        .delete-button {
+            background-color: #f44336; /* Red background */
+            color: white; /* White text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+
+        .delete-button:hover {
+            background-color: #d32f2f; /* Darker red on hover */
+        }
+
+        .cancel-button {
+            background-color: #ccc; /* Gray background */
+            color: #333; /* Dark text */
+            border: none; /* Remove borders */
+            padding: 10px 20px; /* Add padding */
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer; /* Pointer cursor on hover */
+            font-size: 14px; /* Font size */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+
+        .cancel-button:hover {
+            background-color: #bbb; /* Darker gray on hover */
+        }
+
+        /* Search Bar Styles */
+        #searchCustomer {
+            width: 300px; /* Adjust the width as needed */
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>CRM</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Add Customer Form -->
+    <form method="POST" onsubmit="addCustomer(event)">
+        <div class="form-group">
+            <input type="text" id="customer_name" name="customer_name" required placeholder=" ">
+            <label for="customer_name">Customer Name</label>
+        </div>
+        <div class="form-group">
+            <input type="text" id="contact_info" name="contact_info" required placeholder=" ">
+            <label for="contact_info">Customer Mobile</label>
+        </div>
+        <div class="form-group">
+            <select id="how_know_us" name="how_know_us" required>
+                <option value="" disabled selected>How did the customer know us?</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Tiktok">Tiktok</option>
+                <option value="Referral">Referral</option>
+                <option value="Life Field">Life Field</option>
+                <option value="Family">Family</option>
+                <option value="Walker">Walker</option>
+            </select>
+            <label for="how_know_us">How did the customer know us?</label>
+        </div>
+        <div class="form-group">
+            <input type="date" id="birthday_date" name="birthday_date" placeholder=" ">
+            <label for="birthday_date">Birthday Date</label>
+        </div>
+        <button type="submit">Add Customer</button>
+    </form>
+
+    <!-- Bulk Upload -->
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <input type="file" id="bulk_customer_upload" name="bulk_customer_upload" accept=".xlsx, .xls">
+            <label for="bulk_customer_upload">Upload Excel File for Bulk Customer Update</label>
+        </div>
+        <button type="submit" name="action" value="bulk_customer_upload">Bulk Upload Customers</button>
+    </form>
+
+    <!-- Search Bar -->
+    <div class="form-group">
+        <input type="text" id="searchCustomer" placeholder="Search by mobile..." oninput="filterCustomers()">
+        <button onclick="searchCustomer()">Search</button>
+    </div>
+
+    <!-- Customer List -->
+    <h2>Customer List</h2>
+    <table id="customerTable" style="display: none;"> <!-- Initially hidden -->
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>Mobile</th>
+                <th>How They Know Us</th>
+                <th>Birthday</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+                <tr data-customer-id="{{ customer['id'] }}">
+                    <td>{{ customer['customer_name'] }}</td>
+                    <td>{{ customer['contact_info'] }}</td>
+                    <td>{{ customer['how_know_us'] }}</td>
+                    <td>{{ customer['birthday_date'] }}</td>
+                    <td>
+                        <button onclick="openCustomerProfile('{{customer['id']}}')">View Profile</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeConfirmationModal()">&times;</span>
+            <h3>Customer Added Successfully!</h3>
+            <p>The customer has been added to the CRM.</p>
+            <div class="modal-buttons">
+                <button onclick="closeConfirmationModal()" class="cancel-button">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Profile Modal -->
+    <div id="customerProfileModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCustomerProfileModal()">&times;</span>
+            <div id="customerProfileContent">
+                <!-- Customer profile content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Back Button -->
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <!-- JavaScript -->
+    <script>
+        let currentCustomerId = null; // Initialize currentCustomerId
+
+        // Function to open the confirmation modal
+        function openConfirmationModal() {
+            document.getElementById('confirmationModal').style.display = 'block';
+        }
+
+        // Function to close the confirmation modal
+        function closeConfirmationModal() {
+            document.getElementById('confirmationModal').style.display = 'none';
+        }
+
+        // Function to close the customer profile modal
+        function closeCustomerProfileModal() {
+            document.getElementById('customerProfileModal').style.display = 'none';
+        }
+
+        // Function to add a new customer via AJAX
+        function addCustomer(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+
+            fetch("/crm", {
+                method: "POST",
+                body: formData,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        openConfirmationModal();
+                        refreshCustomerTable();
+                    } else {
+                        alert(data.message || 'Failed to add customer.');
+                    }
+                })
+                .catch(error => {
+                    alert("Failed to add customer.");
+                    console.error('Error:', error);
+                });
+        }
+
+        // Function to refresh the customer table
+        function refreshCustomerTable() {
+            fetch("/get_customers")
+                .then(response => response.json())
+                .then(data => {
+                    const customerTable = document.getElementById('customerTable').getElementsByTagName('tbody')[0];
+                    customerTable.innerHTML = '';
+
+                    data.customers.forEach(customer => {
+                        const newRow = customerTable.insertRow();
+                        newRow.setAttribute('data-customer-id', customer.id);
+                        newRow.innerHTML = `
+                            <td>${customer.customer_name}</td>
+                            <td>${customer.contact_info}</td>
+                            <td>${customer.how_know_us}</td>
+                            <td>${customer.birthday_date}</td>
+                            <td><button onclick="openCustomerProfile('${customer.id}')">View Profile</button></td>
+                        `;
+                    });
+                });
+        }
+
+        // Function to open customer profile
+        function openCustomerProfile(customerId) {
+            currentCustomerId = customerId; // Set currentCustomerId when opening profile
+            fetch(`/customer_profile/${customerId}`)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('customerProfileContent').innerHTML = data;
+                    document.getElementById('customerProfileModal').style.display = 'block';
+                });
+        }
+
+
+        // Function to search customers
+        function searchCustomer() {
+            const searchValue = document.getElementById('searchCustomer').value.trim().toLowerCase();
+            const customerTable = document.getElementById('customerTable');
+            const rows = customerTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            let found = false;
+
+            for (let row of rows) {
+                const mobile = row.cells[1].textContent.trim().toLowerCase();
+                if (mobile.includes(searchValue)) {
+                    row.style.display = ''; // Show the row
+                    found = true;
+                } else {
+                    row.style.display = 'none'; // Hide the row
+                }
+            }
+
+            customerTable.style.display = found ? 'table' : 'none'; // Show or hide the table
+            if (!found) {
+                alert("No customer found with this mobile number.");
+            }
+        }
+
+        // Function to save notes
+        function saveNotes() {
+            const notes = document.getElementById('customerNotes').value;
+
+            fetch(`/save_notes/${currentCustomerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ notes: notes }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Notes saved successfully.");
+                    } else {
+                        alert("Failed to save notes.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving notes.');
+                });
+        }
+
+        // Function to save communication preferences
+        function saveCommunicationPreferences() {
+            const emailNotifications = document.getElementById('emailNotifications').checked;
+            const smsNotifications = document.getElementById('smsNotifications').checked;
+            const whatsappNotifications = document.getElementById('whatsappNotifications').checked;
+
+            fetch(`/save_communication_preferences/${currentCustomerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email_notifications: emailNotifications,
+                    sms_notifications: smsNotifications,
+                    whatsapp_notifications: whatsappNotifications,
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Preferences saved successfully.");
+                    } else {
+                        alert("Failed to save preferences.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving preferences.');
+                });
+        }
+    </script>
+</body>
+</html>

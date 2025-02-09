@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        /* Purchase history styles */
+        .purchase-history {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .purchase-history h3 {
+            margin-top: 0;
+        }
+
+        .purchase-history table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .purchase-history th, .purchase-history td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .purchase-history th {
+            background-color: #f2f2f2;
+        }
+
+        /* Edit mobile form styles */
+        #editMobileForm {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #editMobileForm input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #editMobileForm button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Reports</h1>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Report Filters Form -->
+    <form method="POST">
+        <div class="form-group">
+            <select name="report_type" id="report_type" required>
+                <option value="">Select Report Type</option>
+                <option value="sales_by_date">Sales by Date</option>
+                <option value="customers_by_birth_month">Customers by Birth Month</option>
+                <option value="churned_customers">Churned Customers</option>
+                <option value="top_customers">Top Customers by Sales</option>
+                <option value="product_performance">Product Performance</option>
+                <option value="refund_analysis">Refund Analysis</option>
+                <option value="customer_acquisition_channels">Acquisition Channels Analysis</option>
+                <option value="inventory_turnover">Inventory Turnover</option>
+                <option value="customer_lifetime_value">Customer Lifetime Value</option>
+                <option value="sales_by_payment_type">Sales by Payment Type</option>
+                
+                <option value="inventory_aging">Inventory Aging Report</option>
+            </select>
+            <label for="report_type">Report Type</label>
+        </div>
+
+        <!-- Month Dropdown for Customers by Birth Month -->
+        <div class="form-group" id="month-filter" style="display: none;">
+            <select name="selected_month" id="selected_month">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+            <label for="selected_month">Select Month</label>
+        </div>
+
+        <!-- Date Range Filters -->
+        <div class="form-group" id="date-range-filter">
+            <input type="date" name="start_date" id="start_date">
+            <label for="start_date">Start Date</label>
+        </div>
+        <div class="form-group" id="date-range-filter">
+            <input type="date" name="end_date" id="end_date">
+            <label for="end_date">End Date</label>
+        </div>
+
+        <!-- Customer and Product Filters -->
+        <div class="form-group" id="customer-filter">
+            <select name="customer_name" id="customer_name">
+                <option value="">All Customers</option>
+                {% for customer in customers %}
+                    <option value="{{ customer.customer_name }}">{{ customer.customer_name }}</option>
+                {% endfor %}
+            </select>
+            <label for="customer_name">Customer Name</label>
+        </div>
+
+        <div class="form-group" id="product-filter">
+            <select name="product_category" id="product_category">
+                <option value="">All Categories</option>
+                {% for category in product_categories %}
+                    <option value="{{ category.product_type }}">{{ category.product_type }}</option>
+                {% endfor %}
+            </select>
+            <label for="product_category">Product Category</label>
+        </div>
+
+        <button type="submit">Generate Report</button>
+    </form>
+
+    <!-- Report Display Section -->
+    {% if report_html %}
+        <div class="dashboard">
+            <h2>{{ report_type|replace('_', ' ')|title }} Report</h2>
+            <div class="table-container">
+                {{ report_html|safe }}
+            </div>
+        </div>
+
+        <!-- Export to Excel Button -->
+        <form method="POST" action="{{ url_for('export_to_excel') }}" style="margin-top: 20px;">
+            <input type="hidden" name="report_type" value="{{ request.form.report_type }}">
+            <input type="hidden" name="start_date" value="{{ request.form.start_date }}">
+            <input type="hidden" name="end_date" value="{{ request.form.end_date }}">
+            <input type="hidden" name="customer_name" value="{{ request.form.customer_name }}">
+            <input type="hidden" name="product_category" value="{{ request.form.product_category }}">
+            <input type="hidden" name="selected_month" value="{{ request.form.selected_month }}">
+            <button type="submit">Export to Excel</button>
+        </form>
+    {% endif %}
+
+    <!-- Back Button -->
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <!-- JavaScript for Dynamic Filters -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const reportType = document.getElementById('report_type');
+            const monthFilter = document.getElementById('month-filter');
+            const dateRangeFilter = document.getElementById('date-range-filter');
+            const customerFilter = document.getElementById('customer-filter');
+            const productFilter = document.getElementById('product-filter');
+
+            // Function to update filter visibility
+            function updateFilters() {
+                const selectedReport = reportType.value;
+
+                // Show/Hide Month Filter
+                if (selectedReport === 'customers_by_birth_month') {
+                    monthFilter.style.display = 'block';
+                    dateRangeFilter.style.display = 'none';
+                } else {
+                    monthFilter.style.display = 'none';
+                    dateRangeFilter.style.display = 'block';
+                }
+
+                // Show/Hide Customer and Product Filters
+                if (selectedReport === 'sales_by_customer' || selectedReport === 'crm' || selectedReport === 'churned_customers' || selectedReport === 'top_customers') {
+                    customerFilter.style.display = 'block';
+                    productFilter.style.display = 'none';
+                } else if (selectedReport === 'sales_by_product' || selectedReport === 'sales_by_item' || selectedReport === 'inventory' || selectedReport === 'product_performance' || selectedReport === 'inventory_aging') {
+                    customerFilter.style.display = 'none';
+                    productFilter.style.display = 'block';
+                } else {
+                    customerFilter.style.display = 'none';
+                    productFilter.style.display = 'none';
+                }
+            }
+
+            // Initial filter setup
+            updateFilters();
+
+            // Update filters when report type changes
+            reportType.addEventListener('change', updateFilters);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Sales</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+    <form method="POST">
+        <!-- Customer Selection -->
+        <div class="form-group">
+            <select id="customer_select" name="customer_select" class="select2" required onchange="fetchCustomerPoints(this)">
+                <option value="" disabled selected>Select a customer</option>
+                {% for customer in customers %}
+                    <option value="{{ customer['id'] }}" data-points="{{ customer['total_points'] }}">
+                        {{ customer['contact_info'] }} ({{ customer['customer_name'] }})
+                    </option>
+                {% endfor %}
+            </select>
+            <label for="customer_select">Customer</label>
+        </div>
+
+        <!-- Loyalty Points Section -->
+        <div id="loyalty_points_section" style="display: none;">
+            <div class="form-group">
+                <input type="number" id="customer_points" name="customer_points" readonly placeholder=" ">
+                <label for="customer_points">Available Points</label>
+            </div>
+            <div class="form-group">
+                <input type="number" id="points_to_redeem" name="points_to_redeem" min="0" placeholder=" " oninput="updateRedeemedPoints(this)">
+                <label for="points_to_redeem">Points to Redeem</label>
+            </div>
+            <div class="form-group">
+                <input type="text" id="points_discount" name="points_discount" readonly placeholder=" ">
+                <label for="points_discount">Discount from Points (EGP)</label>
+            </div>
+        </div>
+
+        <!-- Payment Type -->
+        <div class="form-group">
+            <select id="payment_type" name="payment_type" required>
+                <option value="" disabled selected>Select Payment Type</option>
+                <option value="Cash">Cash</option>
+                <option value="Instapay">Instapay</option>
+                <option value="Smart Wallet">Smart Wallet</option>
+                <option value="Visa">Visa</option>
+            </select>
+            <label for="payment_type">Payment Type</label>
+        </div>
+
+        <!-- Items Section -->
+        <div id="items">
+            <div class="item">
+                <div class="form-group">
+                    <select class="product_select select2" name="product_select[]" required onchange="updatePrice(this)">
+                        <option value="" disabled selected>Select a product</option>
+                        {% for product in products %}
+                            <option value="{{ product['id'] }}" data-price="{{ product['selling_price'] }}" data-stock="{{ product['quantity'] }}">
+                                {{ product['product_name'] }} (Type: {{product['product_type']}}, Gender: {{product['gender']}} , Size: {{product['size']}} , Price: {{ product['selling_price'] }} EGP, Stock: {{ product['quantity'] }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label>Product</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="quantity" name="quantity[]" min="1" required placeholder=" " oninput="calculateTotal(this)">
+                    <label>Quantity</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="price" name="price[]" step="0.01" min="0" required placeholder=" " oninput="calculateTotal(this)">
+                    <label>Price (EGP)</label>
+                </div>
+                <div class="form-group">
+                    <select class="discount" name="discount[]" onchange="calculateTotal(this)">
+                        <option value="0">0%</option>
+                        <option value="10">10%</option>
+                        <option value="20">20%</option>
+                        <option value="30">30%</option>
+                        <option value="40">40%</option>
+                        <option value="50">50%</option>
+                        <option value="60">60%</option>
+                        <option value="70">70%</option>
+                        <option value="80">80%</option>
+                        <option value="90">90%</option>
+                        <option value="100">100%</option>
+                    </select>
+                    <label>Discount</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="total_price" name="total_price[]" readonly placeholder=" ">
+                    <label>Total Price (EGP)</label>
+                </div>
+                <button type="button" class="remove-item" onclick="removeItem(this)" style="margin-bottom: 20px;">Remove</button>
+            </div>
+        </div>
+
+        <!-- Add Item Button -->
+        <button type="button" onclick="addItem()" style="margin-bottom: 20px;">Add Item</button>
+
+        <!-- Overall Total -->
+        <div id="overall_total_form_group" class="form-group">
+            <input type="text" id="overall_total" name="overall_total" readonly placeholder=" ">
+            <label for="overall_total">Overall Total (EGP)</label>
+        </div>
+
+        <!-- Earned Points Section -->
+        <div id="earned_points_section" style="display: none;">
+            <label>Earned Points:</label>
+            <span id="earned_points">0</span>
+        </div>
+
+        <!-- Save Draft Button -->
+        <button type="button" onclick="saveDraft()" class="secondary-button">Save Draft</button>
+
+        <!-- Print Invoice Button -->
+        <button type="button" onclick="printInvoice()" class="secondary-button">Print Invoice</button>
+
+
+        <!-- Submit Button -->
+        <button type="submit">Record Sale</button>
+    </form>
+
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Pass data from Flask to JavaScript -->
+    <script>
+        // Declare products in the global scope
+        const products = {{ products | tojson | safe if products else '[]' }};
+        console.log(products); // Debugging: Check the value of products in the browser console
+    </script>
+
+    <script>
+        // Initialize Select2 for all dropdowns with the class 'select2'
+        $(document).ready(function() {
+            $('.select2').select2();
+        });
+
+        // Fetch customer's loyalty points when a customer is selected
+        function fetchCustomerPoints(select) {
+            const selectedOption = select.options[select.selectedIndex];
+            const customerPoints = selectedOption.getAttribute('data-points');
+            const loyaltyPointsSection = document.getElementById('loyalty_points_section');
+
+            if (customerPoints) {
+                loyaltyPointsSection.style.display = 'block';
+                document.getElementById('customer_points').value = customerPoints;
+                document.getElementById('points_to_redeem').max = customerPoints;
+            } else {
+                loyaltyPointsSection.style.display = 'none';
+            }
+        }
+
+        // Update discount from redeemed points
+        function updateRedeemedPoints(input) {
+            const pointsToRedeem = parseInt(input.value) || 0;
+            const customerPoints = parseInt(document.getElementById('customer_points').value) || 0;
+
+            if (pointsToRedeem > customerPoints) {
+                alert(`You cannot redeem more than ${customerPoints} points.`);
+                input.value = customerPoints;
+                return;
+            }
+
+            const pointsDiscount = (pointsToRedeem * 0.1).toFixed(2); // 1 point = 0.1 EGP
+            document.getElementById('points_discount').value = pointsDiscount;
+            updateOverallTotal();
+        }
+
+        // Add a new item row
+        function addItem() {
+            const itemsDiv = document.getElementById('items');
+            const newItem = document.createElement('div');
+            newItem.classList.add('item');
+            newItem.innerHTML = `
+                <div class="form-group">
+                    <select class="product_select select2" name="product_select[]" required onchange="updatePrice(this)">
+                        <option value="" disabled selected>Select a product</option>
+                        ${products.map(product => `
+                            <option value="${product.id}" data-price="${product.selling_price}" data-stock="${product.quantity}">
+                                ${product.product_name} (Type:${product.product_type}, Gender: ${product.gender}, Size: ${product.size} , Price: ${product.selling_price} EGP, Stock: ${product.quantity})
+                            </option>
+                        `).join('')}
+                    </select>
+                    <label>Product</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="quantity" name="quantity[]" min="1" required placeholder=" " oninput="calculateTotal(this)">
+                    <label>Quantity</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="price" name="price[]" step="0.01" min="0" required placeholder=" " oninput="calculateTotal(this)">
+                    <label>Price (EGP)</label>
+                </div>
+                <div class="form-group">
+                    <select class="discount" name="discount[]" onchange="calculateTotal(this)">
+                        <option value="0">0%</option>
+                        <option value="10">10%</option>
+                        <option value="20">20%</option>
+                        <option value="30">30%</option>
+                        <option value="40">40%</option>
+                        <option value="50">50%</option>
+                        <option value="60">60%</option>
+                        <option value="70">70%</option>
+                        <option value="80">80%</option>
+                        <option value="90">90%</option>
+                        <option value="100">100%</option>
+                    </select>
+                    <label>Discount</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="total_price" name="total_price[]" readonly placeholder=" ">
+                    <label>Total Price (EGP)</label>
+                </div>
+                <button type="button" class="remove-item" onclick="removeItem(this)">Remove</button>
+            `;
+            itemsDiv.appendChild(newItem);
+
+            // Re-initialize Select2 for the new dropdown
+            $(newItem).find('.select2').select2();
+        }
+
+        // Remove an item row
+        function removeItem(button) {
+            const item = button.closest('.item');
+            item.remove();
+            updateOverallTotal();
+        }
+
+        // Update price when a product is selected
+        function updatePrice(select) {
+            const priceInput = select.closest('.item').querySelector('.price');
+            const selectedOption = select.options[select.selectedIndex];
+            const productPrice = selectedOption.getAttribute('data-price');
+            priceInput.value = productPrice;
+            calculateTotal(select);
+        }
+
+        // Calculate total price for an item
+        function calculateTotal(input) {
+            const item = input.closest('.item');
+            const quantity = parseFloat(item.querySelector('.quantity').value) || 0;
+            const price = parseFloat(item.querySelector('.price').value) || 0;
+            const discount = parseFloat(item.querySelector('.discount').value) || 0;
+
+            // Validate stock
+            const selectedOption = item.querySelector('.product_select').options[item.querySelector('.product_select').selectedIndex];
+            const stock = parseFloat(selectedOption.getAttribute('data-stock')) || 0;
+
+            if (quantity > stock) {
+                alert(`Only ${stock} units available for this product.`);
+                item.querySelector('.quantity').value = stock;
+                return;
+            }
+
+            const totalPriceBeforeDiscount = quantity * price;
+            const discountAmount = (totalPriceBeforeDiscount * discount) / 100;
+            const totalPriceAfterDiscount = totalPriceBeforeDiscount - discountAmount;
+
+            item.querySelector('.total_price').value = totalPriceAfterDiscount.toFixed(2);
+            updateOverallTotal();
+        }
+
+        // Update the overall total and earned points
+        function updateOverallTotal() {
+            let overallTotal = 0;
+            document.querySelectorAll('.item').forEach(item => {
+                const totalPrice = parseFloat(item.querySelector('.total_price').value) || 0;
+                overallTotal += totalPrice;
+            });
+
+            // Subtract points discount from the overall total
+            const pointsDiscount = parseFloat(document.getElementById('points_discount').value) || 0;
+            overallTotal -= pointsDiscount;
+
+            document.getElementById('overall_total').value = overallTotal.toFixed(2);
+
+            // Update earned points
+            updateEarnedPoints();
+        }
+
+        // Function to calculate earned points
+        function calculateEarnedPoints(totalAmount) {
+            const pointsPerEGP = 0.1; // 1 point for every 10 EGP
+            return Math.floor(totalAmount * pointsPerEGP);
+        }
+
+        // Update the earned points label
+        function updateEarnedPoints() {
+            const overallTotal = parseFloat(document.getElementById('overall_total').value) || 0;
+            const earnedPoints = calculateEarnedPoints(overallTotal);
+            const earnedPointsSection = document.getElementById('earned_points_section');
+
+            if (earnedPoints > 0) {
+                earnedPointsSection.style.display = 'block';
+                document.getElementById('earned_points').textContent = earnedPoints;
+            } else {
+                earnedPointsSection.style.display = 'none';
+            }
+        }
+
+        // Validate form before submission
+function validateForm() {
+    const customerSelected = document.getElementById('customer_select').value;
+    const paymentTypeSelected = document.getElementById('payment_type').value;
+    const itemsAdded = document.querySelectorAll('.item').length > 0;
+
+    const submitButton = document.getElementById('submit-button');
+    if (customerSelected && paymentTypeSelected && itemsAdded) {
+        submitButton.disabled = false;
+    } else {
+        submitButton.disabled = true;
+    }
+}
+
+// Save draft
+function saveDraft() {
+    const formData = new FormData(document.getElementById('sales-form'));
+    localStorage.setItem('salesDraft', JSON.stringify(Object.fromEntries(formData)));
+    showFeedback(document.getElementById('draft-feedback'), 'Draft saved successfully.', 'success');
+}
+
+
+function printInvoice() {
+    // Check if jsPDF is loaded
+    if (typeof window.jspdf !== 'undefined') {
+        const { jsPDF } = window.jspdf; // Access jsPDF from the global scope
+        const doc = new jsPDF();
+
+        // Add logo
+        const logoUrl = '/static/Logo.jpeg'; // Replace with your logo URL
+        const logoWidth = 20; // Adjust logo width
+        const logoHeight = 20; // Adjust logo height
+        doc.addImage(logoUrl, 'JPEG', 10, 10, logoWidth, logoHeight);
+
+        // Set font and title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Invoice', 70, 30);
+
+        // Add customer details
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        const customerSelect = document.getElementById('customer_select');
+        const customerName = customerSelect.selectedOptions[0]?.text.split('(')[0]?.trim() || 'N/A';
+        const customerContact = customerSelect.selectedOptions[0]?.text.split('(')[1]?.replace(')', '') || 'N/A';
+        doc.text(`Customer: ${customerName}`, 10, 50);
+        doc.text(`Contact: ${customerContact}`, 10, 60);
+
+        // Add payment type
+        doc.text(`Payment Type: ${document.getElementById('payment_type').value}`, 10, 70);
+
+        // Add purchase date
+        const purchaseDate = new Date().toLocaleDateString();
+        doc.text(`Purchase Date: ${purchaseDate}`, 10, 80);
+
+        // Add table header for items
+        let yOffset = 100; // Starting Y position for the table
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Itemized List:', 10, yOffset - 10);
+
+        const tableHeaders = ['#', 'Product', 'Quantity', 'Price', 'Discount%', 'Total(EGP)'];
+        const headerX = [10, 30, 90, 110, 130, 160];
+        tableHeaders.forEach((header, index) => {
+            doc.text(header, headerX[index], yOffset);
+        });
+
+        doc.setFont('helvetica', 'normal');
+        document.querySelectorAll('.item').forEach((item, index) => {
+            yOffset += 10;
+
+            const productName = item.querySelector('.product_select').selectedOptions[0].text.split('(')[0].trim();
+            const quantity = item.querySelector('.quantity').value || '0';
+            const price = item.querySelector('.price').value || '0.00';
+            const discount = item.querySelector('.discount').value || '0';
+            const total = item.querySelector('.total_price').value || '0.00';
+
+            const rowValues = [
+                (index + 1).toString(),
+                productName,
+                quantity,
+                price,
+                discount,
+                total,
+            ];
+
+            rowValues.forEach((value, colIndex) => {
+                doc.text(value, headerX[colIndex], yOffset);
+            });
+        });
+
+        // Add redeemed points and discount amount
+        yOffset += 20;
+        doc.setFontSize(12);
+        const redeemedPoints = document.getElementById('points_to_redeem').value || '0';
+        const pointsDiscount = document.getElementById('points_discount').value || '0.00';
+        doc.text(`Redeemed Points: ${redeemedPoints}`, 10, yOffset);
+        doc.text(`Points Discount: ${pointsDiscount} EGP`, 10, yOffset + 10);
+
+        // Add overall total and earned points
+        yOffset += 20;
+        const overallTotal = document.getElementById('overall_total').value || '0.00';
+        const earnedPoints = document.getElementById('earned_points').textContent || '0';
+        doc.text(`Overall Total: ${overallTotal} EGP`, 10, yOffset);
+        doc.text(`Earned Points: ${earnedPoints}`, 10, yOffset + 10);
+
+        // Save or preview the PDF
+        doc.save(`Invoice_${customerName.replaceAll(' ', '_')}_${purchaseDate.replaceAll('/', '_')}.pdf`);
+    } else {
+        alert('jsPDF is not loaded.');
+    }
+}
+
+
+
+
+
+
+
+// Show feedback messages
+function showFeedback(element, message, type) {
+    element.textContent = message;
+    element.className = `feedback ${type}`;
+}
+
+        // Update price for the first item on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstProductSelect = document.querySelector('.product_select');
+            if (firstProductSelect) {
+                updatePrice(firstProductSelect);
+            }
+        });
+    </script>
+    <!-- Include jsPDF from a CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</body>
+</html>

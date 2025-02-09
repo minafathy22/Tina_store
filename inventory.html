@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+/* Modal styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top of other elements */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.5); /* Black with opacity */
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%; /* Adjust width as needed */
+    max-width: 500px; /* Maximum width */
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.modal-content p {
+    color: #666;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+/* Button styles */
+.modify-button {
+    background-color: #4CAF50; /* Green background */
+    color: white; /* White text */
+    border: none; /* Remove borders */
+    padding: 10px 20px; /* Add padding */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    font-size: 14px; /* Font size */
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+.modify-button:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.delete-button {
+    background-color: #f44336; /* Red background */
+    color: white; /* White text */
+    border: none; /* Remove borders */
+    padding: 10px 20px; /* Add padding */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    font-size: 14px; /* Font size */
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+.delete-button:hover {
+    background-color: #d32f2f; /* Darker red on hover */
+}
+
+.cancel-button {
+    background-color: #ccc; /* Gray background */
+    color: #333; /* Dark text */
+    border: none; /* Remove borders */
+    padding: 10px 20px; /* Add padding */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    font-size: 14px; /* Font size */
+    transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+.cancel-button:hover {
+    background-color: #bbb; /* Darker gray on hover */
+}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Inventory</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Add Product Form -->
+    <form method="POST">
+        <div class="form-group">
+            <input type="text" id="product_name" name="product_name" required placeholder=" ">
+            <label for="product_name">Product Name</label>
+        </div>
+        <div class="form-group">
+            <select id="product_type" name="product_type" required>
+                <option value="" disabled selected>Select Product Type</option>
+                <option value="Tester">Tester</option>
+                <option value="Original">Original</option>
+                <option value="Mirror Original">Mirror Original</option>
+                <option value="Handmade">Handmade</option>
+                <option value="Body Splash">Body Splash</option>
+                <option value="Body Cream">Body Cream</option>
+                <option value="Other">Other</option>
+            </select>
+            <label for="product_type">Product Type</label>
+        </div>
+        <div class="form-group">
+            <select id="gender" name="gender" required>
+                <option value="" disabled selected>Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Unisex">Unisex</option>
+            </select>
+            <label for="gender">Gender</label>
+        </div>
+        <div class="form-group">
+            <select id="size" name="size" required>
+                <option value="" disabled selected>Select Size</option>
+                <option value="100ml">100ml</option>
+                <option value="50ml">50ml</option>
+                <option value="30ml">30ml</option>
+                <option value="200ml">200ml</option>
+            </select>
+            <label for="size">Size</label>
+        </div>
+        <div class="form-group">
+            <input type="number" id="quantity" name="quantity" min="1" required placeholder=" ">
+            <label for="quantity">Quantity</label>
+        </div>
+        <div class="form-group">
+            <input type="number" step="0.01" id="cost_price" name="cost_price" min="0" required placeholder=" ">
+            <label for="cost_price">Cost Price</label>
+        </div>
+        <div class="form-group">
+            <input type="number" step="0.01" id="selling_price" name="selling_price" min="0" required placeholder=" ">
+            <label for="selling_price">Selling Price</label>
+        </div>
+        <button type="submit">Add to Inventory</button>
+        <button type="reset">Reset</button>
+    </form>
+
+    <!-- Bulk Upload Form -->
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <input type="file" id="bulk_inventory_upload" name="bulk_inventory_upload" accept=".xlsx, .xls">
+            <label for="bulk_inventory_upload">Upload Excel File for Bulk Inventory Update</label>
+        </div>
+        <button type="submit" name="action" value="bulk_inventory_upload">Bulk Upload Inventory</button>
+    </form>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="toast {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Available Products Table -->
+    <h2>Available Products</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Type</th>
+                <th>Gender</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Original Stock</th>
+                <th>Cost Price</th>
+                <th>Selling Price</th>
+                <th>Added On</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>{{ product['product_name'] }}</td>
+                    <td>{{ product['product_type'] }}</td>
+                    <td>{{ product['gender'] }}</td>
+                    <td>{{ product['size'] }}</td>
+                    <td>{{ product['quantity'] }}</td>
+                    <td>{{ product['original_stock'] }}</td>
+                    <td>{{ product['cost_price'] }}</td>
+                    <td>{{ product['selling_price'] }}</td>
+                    <td>{{ product['adding_to_inventory_date'] }}</td>
+                    <td>
+                            <button onclick="openDeleteConfirmationModal('{{ product.id }}')" class="delete-button">Delete</button>
+                            <button onclick="openModifyModal('{{ product.id }}', '{{ product.quantity }}', '{{ product.cost_price }}', '{{ product.selling_price }}')" class="modify-button">Modify</button>
+                        </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeDeleteConfirmationModal()">&times;</span>
+        <h3>Are you sure you want to delete this product?</h3>
+        <p>This action cannot be undone.</p>
+        <div class="modal-buttons">
+            <button onclick="confirmDelete()" class="delete-button">Delete</button>
+            <button onclick="closeDeleteConfirmationModal()" class="cancel-button">Cancel</button>
+        </div>
+    </div>
+</div>
+    <!-- Modify Modal -->
+    <div id="modifyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModifyModal()">&times;</span>
+            <form id="modifyForm" method="POST">
+                <div class="form-group">
+                    <input type="number" id="modifyQuantity" name="quantity" min="0" required>
+                    <label for="modifyQuantity">Quantity</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="modifyCostPrice" name="cost_price" step="0.01" min="0" required>
+                    <label for="modifyCostPrice">Cost Price</label>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="modifySellingPrice" name="selling_price" step="0.01" min="0" required>
+                    <label for="modifySellingPrice">Selling Price</label>
+                </div>
+                <button type="submit" class="modify-button">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+
+    <script>
+        // Function to open the modify modal
+        function openModifyModal(productId, quantity, costPrice, sellingPrice) {
+            document.getElementById('modifyQuantity').value = quantity;
+            document.getElementById('modifyCostPrice').value = costPrice;
+            document.getElementById('modifySellingPrice').value = sellingPrice;
+            document.getElementById('modifyForm').action = `/modify_product/${productId}`;
+            document.getElementById('modifyModal').style.display = 'block';
+        }
+
+        // Function to close the modify modal
+        function closeModifyModal() {
+            document.getElementById('modifyModal').style.display = 'none';
+        }
+
+        // Close the modal if the user clicks outside of it
+        window.onclick = function(event) {
+            var modal = document.getElementById('modifyModal');
+            if (event.target == modal) {
+                closeModifyModal();
+            }
+        }
+
+        let productIdToDelete = null;
+
+// Function to open the delete confirmation modal
+function openDeleteConfirmationModal(productId) {
+    productIdToDelete = productId; // Store the product ID to delete
+    document.getElementById('deleteConfirmationModal').style.display = 'block';
+}
+
+// Function to close the delete confirmation modal
+function closeDeleteConfirmationModal() {
+    document.getElementById('deleteConfirmationModal').style.display = 'none';
+    productIdToDelete = null; // Reset the product ID
+}
+
+// Function to confirm deletion
+function confirmDelete() {
+    if (productIdToDelete) {
+        fetch(`/delete_product/${productIdToDelete}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload(); // Reload the page to reflect changes
+            } else {
+                alert("Failed to delete the product.");
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    }
+    closeDeleteConfirmationModal(); // Close the modal after deletion
+}
+
+// Close the modal if the user clicks outside of it
+window.onclick = function(event) {
+    var modal = document.getElementById('deleteConfirmationModal');
+    if (event.target == modal) {
+        closeDeleteConfirmationModal();
+    }
+}
+// Close modals with Escape key
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        closeModifyModal();
+        closeDeleteConfirmationModal();
+    }
+})
+    </script>
+</body>
+</html>

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfume Shop Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.0.0"></script>
+
+    <style>
+        /* Dashboard Container */
+        .dashboard {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Date Range Filters */
+        .date-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .date-filters input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .date-filters button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .date-filters button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Analytics Cards */
+        .cards {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            flex: 1;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007BFF;
+            margin: 0;
+        }
+
+        /* Chart Container Styles */
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .chart-wrapper {
+            height: 300px; /* Fixed height for charts */
+            position: relative;
+        }
+
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ url_for('static', filename='Logo.jpeg') }}" alt="Logo" class="logo">
+        <h1>Welcome to Tina Store Management System</h1>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('sales') }}">Sales</a></li>
+            <li><a href="{{ url_for('refunds') }}">Refunds</a></li>
+            <li><a href="{{ url_for('inventory') }}">Inventory</a></li>
+            <li><a href="{{ url_for('finance') }}">Finance</a></li>
+            <li><a href="{{ url_for('crm') }}">CRM</a></li>
+            <li><a href="{{ url_for('reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+        <h2>Dashboard</h2>
+
+        <!-- Date Range Filters -->
+        <div class="date-filters">
+            <input type="date" id="start_date" value="{{ request.args.get('start_date', '') }}">
+            <input type="date" id="end_date" value="{{ request.args.get('end_date', '') }}">
+            <button onclick="applyFilters()">Apply Filter</button>
+            <button onclick="clearFilters()">Clear Filter</button>
+        </div>
+
+        <!-- Analytics Cards -->
+        <div class="cards">
+            <div class="card">
+                <h3>Total Sales</h3>
+                <p>${{ total_sales or '0.00' }}</p>
+            </div>
+            <div class="card">
+                <h3>Total Inventory</h3>
+                <p>{{ total_products or '0' }} Products</p>
+            </div>
+            <div class="card">
+                <h3>Total Customers</h3>
+                <p>{{ total_customers or '0' }} Customers</p>
+            </div>
+        </div>
+
+        <!-- Advanced Analytics Section -->
+        <div class="analytics">
+            <h3>Sales Analytics</h3>
+            <div class="chart-container">
+                <!-- Sales Trend Chart -->
+                <div>
+                    <div class="chart-title">Sales Trend</div>
+                    <div class="chart-wrapper">
+                        <canvas id="salesTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sales by Product Type Chart -->
+                <div>
+                    <div class="chart-title">Sales by Product Type</div>
+                    <div class="chart-wrapper">
+                        <canvas id="salesByTypeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sales by Product Chart -->
+                <div>
+                    <div class="chart-title">Sales by Product</div>
+                    <div class="chart-wrapper">
+                        <canvas id="salesByProductChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sales by Gender Chart -->
+                <div>
+                    <div class="chart-title">Sales by Gender</div>
+                    <div class="chart-wrapper">
+                        <canvas id="salesByGenderChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sales by Size Chart -->
+                <div>
+                    <div class="chart-title">Sales by Size</div>
+                    <div class="chart-wrapper">
+                        <canvas id="salesBySizeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to apply date filters
+        function applyFilters() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            window.location.href = `{{ url_for('home') }}?start_date=${startDate}&end_date=${endDate}`;
+        }
+
+        // Function to clear date filters
+        function clearFilters() {
+            window.location.href = `{{ url_for('home') }}`;
+        }
+
+        // Function to format dates using Luxon
+        function formatDateLabels(dates) {
+            return dates.map(date => {
+                return luxon.DateTime.fromISO(date).toFormat('MMM d, yyyy'); // Format as "Oct 5, 2023"
+            });
+        }
+
+        // Sales Trend Chart Configuration
+        // Sales Trend Chart Configuration
+const salesTrendCtx = document.getElementById('salesTrendChart').getContext('2d');
+const salesTrendChart = new Chart(salesTrendCtx, {
+    type: 'line',
+    data: {
+        labels: {{ sales_dates | tojson | safe }}.map(date => new Date(date)), // Convert to Date objects
+        datasets: [{
+            label: 'Sales Trend',
+            data: {{ sales_totals | tojson | safe }},
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                type: 'time',  // Ensure it's using the time scale
+                time: {
+                    unit: 'day', // Display by day
+                    tooltipFormat: 'll', // Tooltip format (e.g., Jan 18, 2025)
+                    displayFormats: {
+                        day: 'MMM D' // Display format for x-axis (e.g., Jan 18)
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Date'
+                }
+            },
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            tooltip: {
+                enabled: true,
+                mode: 'index',
+                intersect: false
+            }
+        }
+    }
+});
+
+
+        // Sales by Product Type Chart (Pie Chart)
+        const salesByTypeCtx = document.getElementById('salesByTypeChart').getContext('2d');
+        const salesByTypeChart = new Chart(salesByTypeCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ sales_by_type_labels | tojson | safe }},
+                datasets: [{
+                    label: 'Sales by Type',
+                    data: {{ sales_by_type_values | tojson | safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Sales by Product Chart (Doughnut Chart)
+        const salesByProductCtx = document.getElementById('salesByProductChart').getContext('2d');
+        const salesByProductChart = new Chart(salesByProductCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ sales_by_product_labels | tojson | safe }},
+                datasets: [{
+                    label: 'Sales by Product',
+                    data: {{ sales_by_product_values | tojson | safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Sales by Gender Chart (Pie Chart)
+        const salesByGenderCtx = document.getElementById('salesByGenderChart').getContext('2d');
+        const salesByGenderChart = new Chart(salesByGenderCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ sales_by_gender_labels | tojson | safe }},
+                datasets: [{
+                    label: 'Sales by Gender',
+                    data: {{ sales_by_gender_values | tojson | safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(75, 192, 192, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+
+        // Sales by Size Chart (Doughnut Chart)
+        const salesBySizeCtx = document.getElementById('salesBySizeChart').getContext('2d');
+        const salesBySizeChart = new Chart(salesBySizeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ sales_by_size_labels | tojson | safe }},
+                datasets: [{
+                    label: 'Sales by Size',
+                    data: {{ sales_by_size_values | tojson | safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

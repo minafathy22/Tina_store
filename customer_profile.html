@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto; /* Enable scrolling for the entire modal */
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto; /* Center the modal vertically */
+            padding: 30px;
+            border: 1px solid #888;
+            width: 80%; /* Larger modal */
+            max-width: 900px; /* Maximum width */
+            max-height: 80vh; /* Limit height to 80% of the viewport height */
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            font-family: Arial, sans-serif;
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        h2 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Customer Details Section */
+        #customerDetails {
+            margin-bottom: 30px;
+        }
+
+        #customerDetails p {
+            font-size: 18px;
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        #customerDetails strong {
+            color: #333;
+            font-weight: bold;
+            display: inline-block;
+            width: 200px; /* Fixed width for alignment */
+        }
+
+        #customerDetails button {
+            margin-left: 10px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        #customerDetails button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Edit Mobile Form */
+        #editMobileForm {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #editMobileForm input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #editMobileForm button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.3s ease;
+        }
+
+        #editMobileForm button[type="button"] {
+            background-color: #6c757d;
+        }
+
+        #editMobileForm button:hover {
+            opacity: 0.9;
+        }
+
+        /* Purchase History Section */
+        .purchase-history {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .purchase-history h3 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .purchase-history table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .purchase-history th,
+        .purchase-history td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .purchase-history th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .purchase-history td {
+            color: #555;
+        }
+
+        .purchase-history tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .purchase-history tr:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Loyalty Program Section */
+        .loyalty-section {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .loyalty-section h3 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .loyalty-section p {
+            font-size: 18px;
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .loyalty-section button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .loyalty-section button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Redeemed Points History Section */
+        .redeemed-history {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .redeemed-history h3 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .redeemed-history table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .redeemed-history th,
+        .redeemed-history td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .redeemed-history th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .redeemed-history td {
+            color: #555;
+        }
+
+        .redeemed-history tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .redeemed-history tr:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .notes-section h3 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            resize: vertical;
+        }
+
+        .notes-section button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .notes-section button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Communication Preferences Section */
+        .communication-preferences {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .communication-preferences h3 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .communication-preferences label {
+            display: block;
+            margin: 10px 0;
+            font-size: 16px;
+            color: #555;
+        }
+
+        .communication-preferences input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .communication-preferences button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .communication-preferences button:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%; /* Full width on smaller screens */
+                margin: 10% auto;
+                padding: 15px;
+            }
+
+            .purchase-history table,
+            .redeemed-history table {
+                display: block;
+                overflow-x: auto; /* Horizontal scroll for small screens */
+            }
+
+            #customerDetails p {
+                font-size: 16px; /* Smaller font for mobile */
+            }
+
+            #customerDetails strong {
+                width: 120px; /* Smaller fixed width for mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-content">
+        <span class="close" onclick="closeCustomerProfileModal()">&times;</span>
+        <h2>Customer Profile</h2>
+
+        <!-- Customer Details -->
+        <div id="customerDetails">
+            <p><strong>Name:</strong> <span id="customerName">{{ customer['customer_name'] }}</span></p>
+            <p><strong>Mobile:</strong> <span id="customerMobile">{{ customer['contact_info'] }}</span> <button onclick="editMobile()">Edit</button></p>
+            <p><strong>How They Know Us:</strong> <span id="customerHowKnowUs">{{ customer['how_know_us'] }}</span></p>
+            <p><strong>Birthday:</strong> <span id="customerBirthday">{{ customer['birthday_date'] }}</span></p>
+        </div>
+
+        <!-- Loyalty Program Section -->
+        <div class="loyalty-program">
+            <h3>Loyalty Program</h3>
+            <p><strong>Total Points:</strong> {{ customer['total_points'] }}</p>
+            <p><strong>Current Tier:</strong> {{ customer['current_tier'] }}</p>
+
+            <!-- Redeemed Points History -->
+            <h4>Redeemed Points History</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Redeemed Points</th>
+                        <th>Discount Amount (EGP)</th>
+                        <th>Reward Type</th>
+                        <th>Redeemed Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reward in customer['rewards'] %}
+                        <tr>
+                            <td>{{ reward['points_redeemed'] }}</td>
+                            <td>{{ reward['points_redeemed'] * 0.1 }}</td> <!-- 1 point = 0.1 EGP -->
+                            <td>{{ reward['reward_type'] }}</td>
+                            <td>{{ reward['reward_date'] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Purchase History -->
+        <div class="purchase-history">
+            <h3>Purchase History</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>Total Amount (EGP)</th>
+                        <th>Purchase Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for purchase in customer['purchases'] %}
+                        <tr class="{% if purchase['quantity'] < 0 %}refunded{% endif %}">
+                            <td>{{ purchase['product_name'] }}</td>
+                            <td>{{ purchase['quantity'] }}</td>
+                            <td>{{ purchase['total_amount'] }} EGP</td>
+                            <td>{{ purchase['purchase_date'] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Notes Section -->
+        <div class="notes-section">
+            <h3>Notes</h3>
+            <textarea id="customerNotes" rows="4" placeholder="Add notes about the customer...">{{ customer['notes'] }}</textarea>
+            <button id="saveNotesButton" onclick="saveNotes()">Save Notes</button>
+        </div>
+
+        <!-- Communication Preferences -->
+        <div class="communication-preferences">
+            <h3>Communication Preferences</h3>
+            <label>
+                <input type="checkbox" id="emailNotifications" {% if customer['email_notifications'] %}checked{% endif %}>
+                Email Notifications
+            </label>
+            <label>
+                <input type="checkbox" id="smsNotifications" {% if customer['sms_notifications'] %}checked{% endif %}>
+                SMS Notifications
+            </label>
+            <label>
+                <input type="checkbox" id="whatsappNotifications" {% if customer['whatsapp_notifications'] %}checked{% endif %}>
+                WhatsApp Notifications
+            </label>
+            <button onclick="saveCommunicationPreferences()">Save Preferences</button>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let currentCustomerId = {{ customer['id'] }};
+
+        // Function to edit mobile number
+        function editMobile() {
+            document.getElementById('customerDetails').style.display = 'none';
+            document.getElementById('editMobileForm').style.display = 'block';
+            document.getElementById('newMobile').value = document.getElementById('customerMobile').textContent; // Pre-fill the input with the current mobile number
+        }
+
+        // Function to cancel editing mobile number
+        function cancelEditMobile() {
+            document.getElementById('customerDetails').style.display = 'block';
+            document.getElementById('editMobileForm').style.display = 'none';
+        }
+
+        // Function to save mobile number
+        function saveMobile(event) {
+            event.preventDefault();
+            const newMobile = document.getElementById('newMobile').value;
+
+            fetch(`/update_mobile/${currentCustomerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mobile: newMobile }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('customerMobile').textContent = newMobile; // Update the displayed mobile number
+                        cancelEditMobile(); // Hide the edit form
+                        window.parent.refreshCustomerTable(); // Refresh the customer table in the parent page
+                    } else {
+                        alert(data.message || 'Failed to update mobile number.');
+                    }
+                });
+        }
+
+        // Function to save notes
+        function saveNotes() {
+            const notes = document.getElementById('customerNotes').value;
+
+            fetch(`/save_notes/${currentCustomerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ notes: notes }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Notes saved successfully.");
+                    } else {
+                        alert("Failed to save notes.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving notes.');
+                });
+        }
+
+        // Function to save communication preferences
+        function saveCommunicationPreferences() {
+            const emailNotifications = document.getElementById('emailNotifications').checked;
+            const smsNotifications = document.getElementById('smsNotifications').checked;
+            const whatsappNotifications = document.getElementById('whatsappNotifications').checked;
+
+            fetch(`/save_communication_preferences/${currentCustomerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email_notifications: emailNotifications,
+                    sms_notifications: smsNotifications,
+                    whatsapp_notifications: whatsappNotifications,
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Preferences saved successfully.");
+                    } else {
+                        alert("Failed to save preferences.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving preferences.');
+                });
+        }
+
+        // Function to close the modal (handled by parent page)
+        function closeCustomerProfileModal() {
+            window.parent.closeCustomerProfileModal();
+        }
+    </script>
+</body>
+</html>
